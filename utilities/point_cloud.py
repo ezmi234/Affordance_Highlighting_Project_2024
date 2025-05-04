@@ -6,7 +6,7 @@ from utils import device
 import trimesh
 from scipy.spatial import cKDTree
 
-def visualize_affordance_pointcloud(points, labels, color_positive=[1.0, 0.0, 0.0], color_negative=[0.6, 0.6, 0.6]):
+def visualize_affordance_pointcloud(points, labels, color_positive=[204/255, 1., 0.], color_negative=[180/255, 180/255, 180/255], point_size=5.0):
     """
     Visualize a point cloud and highlight affordance-labeled points.
 
@@ -23,7 +23,13 @@ def visualize_affordance_pointcloud(points, labels, color_positive=[1.0, 0.0, 0.
     colors[np.where(labels > 0.5)] = color_positive
     pcd.colors = o3d.utility.Vector3dVector(colors)
 
-    o3d.visualization.draw_geometries([pcd])
+    vis = o3d.visualization.Visualizer()
+    vis.create_window()
+    vis.add_geometry(pcd)
+    render_opt = vis.get_render_option()
+    render_opt.point_size = point_size  # Set point size here
+    vis.run()
+    vis.destroy_window()
 
 def pointcloud_to_voxel_mesh(points, resolution=64, threshold=0.5, export_path=None):
   if not isinstance(points, torch.Tensor):
@@ -63,34 +69,30 @@ def pointcloud_to_voxel_mesh(points, resolution=64, threshold=0.5, export_path=N
 
   return mesh
 
-def project_mesh_labels_to_pointcloud_torch(mesh: trimesh.Trimesh, face_labels: torch.Tensor, pointcloud: torch.Tensor):
+def project_vertex_scores_to_pointcloud(mesh: trimesh.Trimesh, vertex_scores: torch.Tensor, pointcloud: torch.Tensor, device: str = 'cpu'):
     """
-    Projects mesh face labels onto a point cloud using nearest surface sampling.
+    Projects per-vertex scores (float) from mesh to point cloud via face interpolation.
 
     Args:
-        mesh (trimesh.Trimesh): mesh with predicted per-face labels.
-        face_labels (torch.Tensor): shape (F,), tensor of predicted labels per face.
-        pointcloud (torch.Tensor): shape (N, 3), input point cloud.
+        mesh (trimesh.Trimesh): mesh with faces and vertices
+        vertex_scores (torch.Tensor): [V], score per vertex
+        pointcloud (torch.Tensor): [N, 3], target point cloud
+        device (str): device to use for computation
 
     Returns:
-        torch.Tensor: shape (N,), predicted label per point.
+        torch.Tensor: [N], predicted scores for each point
     """
-    assert face_labels.shape[0] == len(mesh.faces), "Mismatch between number of mesh faces and face_labels"
 
-    # Convert pointcloud to numpy for KD-tree query
-    pointcloud_np = pointcloud.detach().cpu().numpy()
+    face_tensor = torch.tensor(mesh.faces, device=device)
+    face_scores = vertex_scores[face_tensor].mean(dim=1)
 
-    # Sample dense points on mesh surface
-    samples_np, face_indices_np = trimesh.sample.sample_surface(mesh, 10 * pointcloud_np.shape[0])
-
-    # KD-tree on sampled mesh surface points
+    samples_np, face_indices_np = trimesh.sample.sample_surface(mesh, 10 * pointcloud.shape[0])
     tree = cKDTree(samples_np)
-    _, nearest_sample_idxs = tree.query(pointcloud_np, k=1)
 
-    # Map nearest point back to face index
-    nearest_face_ids = face_indices_np[nearest_sample_idxs]
+    # Nearest mesh sample to each point
+    pointcloud_np = pointcloud.detach().cpu().numpy()
+    _, nearest_idx = tree.query(pointcloud_np, k=1)
+    nearest_faces = face_indices_np[nearest_idx]
 
-    # Get the label for each face and convert back to torch tensor
-    projected_labels = face_labels[nearest_face_ids]
-
-    return projected_labels.to(pointcloud.device)
+    # Assign scores from face to point
+    return face_scores[nearest_faces].to(pointcloud.device)
