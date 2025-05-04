@@ -1,6 +1,7 @@
 import pickle
 import numpy as np
 import torch
+import random
 
 # ================== AffordanceNet Dataset HELPER FUNCTIONS =============================
 
@@ -69,3 +70,26 @@ def get_affordance_label(sample, affordance_class, device='cpu'):
     """
     label = sample["data_info"]["label"][affordance_class]
     return torch.tensor(label, dtype=torch.float32).squeeze().to(device)
+
+def split_dataset(dataset, val_ratio=0.01, seed=42):
+    """
+    Splits a dataset into validation and test sets using a fixed random seed.
+
+    Args:
+        dataset (list): the full dataset (e.g., list of dicts)
+        val_ratio (float): fraction to use for val and for test (total = 2 * val_ratio)
+        seed (int): random seed for deterministic shuffling
+
+    Returns:
+        (val_set, test_set): two subsets of the dataset
+    """
+
+    dataset_copy = dataset.copy()
+    random.seed(seed)
+    random.shuffle(dataset_copy)
+
+    n_val = int(val_ratio * len(dataset_copy))
+    val_set = dataset_copy[:n_val]
+    test_set = dataset_copy[n_val:2 * n_val]
+
+    return val_set, test_set
