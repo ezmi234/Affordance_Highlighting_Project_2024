@@ -93,3 +93,28 @@ def split_dataset(dataset, val_ratio=0.01, seed=42):
     test_set = dataset_copy[n_val:2 * n_val]
 
     return val_set, test_set
+
+def split_dataset_by_class_and_affordance(dataset, object_class, affordance, val_size=5, test_size=5, seed=42):
+    """
+    Splits a dataset into validation and test sets for a specific object class and affordance.
+
+    Args:
+        dataset (list): the full dataset (e.g., list of dicts)
+        object_class (str): the class of the object (e.g., "knife")
+        affordance (str): the affordance to filter (e.g., "grasp")
+        val_size (int): number of samples to use for validation and test (total = 2 * val_size)
+        seed (int): random seed for deterministic shuffling
+
+    Returns:
+        (val_set, test_set): two subsets of the dataset
+    """
+    filtered_dataset = [item for item in dataset if item['semantic class'] == object_class
+                        and is_affordance_present(item, affordance)]
+
+    random.seed(seed)
+    random.shuffle(filtered_dataset)
+
+    val_set = filtered_dataset[:val_size]
+    test_set = filtered_dataset[val_size:val_size + test_size]
+
+    return val_set, test_set
