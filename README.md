@@ -1,8 +1,28 @@
 # Affordance Highlighting project
-## Part 3 - Affordance Benchmark on the AffordanceNet Dataset
+## Extensions
 
-### Fine-Tuning
-The code for fine-tuning the hyperparameters is located in the `validation.ipynb` file. It uses Optuna to optimize the hyperparameters on the validation set (`val_set`).
+### Utility Files
+- `utilities/positional_encoding.py`: Contains the implementation for the Positional Encoding extension.
+- `utilities/prompt_enricher.py`: Handles the multi-weighted prompt generation.
 
-### Testing
-For testing, the same code in `validation.ipynb` is used, but the `val_set` is replaced with the `test_set`. The testing is performed using the three models mentioned in the paper report.
+### Data and Images
+- **Real Object Scans** (added in the `data` class):
+  - `ps5.obj`
+  - `tavolo.obj`
+  - `borraccia.obj`
+  - `auto.obj`
+- **Background Images** (in the `images` folder):
+  - `background.jpg`
+  - `background2.jpeg`
+
+All these resources are utilized in the `extensions.ipynb` file.
+
+## OpenShape Integration
+
+The `OpenShape` folder is designed to run in the [OpenShape repository](https://github.com/Colin97/OpenShape_code.git). The following changes were made:
+- The `MinkowskiFCNN` class in `OpenShape/src/models/Minkowski.py` was adapted.
+- The configuration file `OpenShape/src/configs/train.yaml` was modified.
+
+### Runnable Files
+- `OpenShape/src/OpenShapeHighlighter-training.py`: For training purposes.
+- `OpenShape/src/OpenShapeHighlighter.py`: For the classical OpenShapeHighlighter functionality.
