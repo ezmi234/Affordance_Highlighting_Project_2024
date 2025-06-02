@@ -3,7 +3,23 @@ import kaolin.ops.conversions as conversions
 from utils import device
 import trimesh
 
-def pointcloud_to_voxel_mesh(points, resolution=64, threshold=0.5, export_path=None):
+def pointcloud_to_voxel_mesh(points, resolution=16, threshold=0.5, export_path=None):
+  """
+  Converts a point cloud into a voxel-based triangular mesh.
+
+  Parameters:
+      points (torch.Tensor or array-like): Input point cloud data, typically of shape (N, 3),
+          where N is the number of points.
+      resolution (int, optional): Resolution of the voxel grid. Default is 16.
+      threshold (float, optional): Iso-surface value for mesh extraction. Default is 0.5.
+      export_path (str, optional): Path to save the generated mesh. If None, the mesh is not saved.
+
+  Returns:
+      trimesh.Trimesh: A triangular mesh object created from the voxel grid.
+
+  Raises:
+      ValueError: If the generated mesh is empty (no vertices or faces).
+  """
   if not isinstance(points, torch.Tensor):
     points = torch.tensor(points, dtype=torch.float32)
 
@@ -26,10 +42,10 @@ def pointcloud_to_voxel_mesh(points, resolution=64, threshold=0.5, export_path=N
   if verts.numel() == 0 or faces.numel() == 0:
       raise ValueError("Empty mesh generated from voxel grid.")
 
-  # Create mesh
+  # Create a triangular mesh object
   mesh = trimesh.Trimesh(vertices=verts.numpy(), faces=faces.numpy())
 
-  # Smoothing and export
+  # Apply Laplacian smoothing to improve mesh quality
   mesh = trimesh.smoothing.filter_laplacian(
       mesh, lamb=0.2, iterations=8,
       implicit_time_integration=False,
